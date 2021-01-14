@@ -16,3 +16,12 @@ __pycache__
 *.dvi
 *.log
 *.out.ps
+
+# PyEnv files
+.python-version
+
+# PyCharm files
+.idea/
+
+# Jupyter notebooks
+.ipynb_checkpoints
