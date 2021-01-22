@@ -1,6 +1,3 @@
-# Our PDFs are all generated
-*.pdf
-
 # Emacs files
 *~
 
@@ -22,6 +19,9 @@ __pycache__
 
 # PyCharm files
 .idea/
+
+# macOS files
+.DS_Store
 
 # Jupyter notebooks
 .ipynb_checkpoints
