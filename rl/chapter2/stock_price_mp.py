@@ -5,10 +5,8 @@ import itertools
 from rl.distribution import Categorical, Constant
 from rl.markov_process import MarkovProcess
 from rl.gen_utils.common_funcs import get_logistic_func, get_unit_sigmoid_func
-from rl.chapter2.stock_price_simulations import\
-    plot_single_trace_all_processes
-from rl.chapter2.stock_price_simulations import\
-    plot_distribution_at_time_all_processes
+from rl.chapter2.stock_price_simulations import plot_single_trace_all_processes
+from rl.chapter2.stock_price_simulations import plot_distribution_at_time_all_processes
 
 
 @dataclass(frozen=True)
@@ -28,10 +26,9 @@ class StockPriceMP1(MarkovProcess[StateMP1]):
     def transition(self, state: StateMP1) -> Categorical[StateMP1]:
         up_p = self.up_prob(state)
 
-        return Categorical({
-            StateMP1(state.price + 1): up_p,
-            StateMP1(state.price - 1): 1 - up_p
-        })
+        return Categorical(
+            {StateMP1(state.price + 1): up_p, StateMP1(state.price - 1): 1 - up_p}
+        )
 
 
 @dataclass(frozen=True)
@@ -54,10 +51,12 @@ class StockPriceMP2(MarkovProcess[StateMP2]):
     def transition(self, state: StateMP2) -> Categorical[StateMP2]:
         up_p = self.up_prob(state)
 
-        return Categorical({
-            StateMP2(state.price + 1, True): up_p,
-            StateMP2(state.price - 1, False): 1 - up_p
-        })
+        return Categorical(
+            {
+                StateMP2(state.price + 1, True): up_p,
+                StateMP2(state.price - 1, False): 1 - up_p,
+            }
+        )
 
 
 @dataclass(frozen=True)
@@ -73,73 +72,89 @@ class StockPriceMP3(MarkovProcess[StateMP3]):
 
     def up_prob(self, state: StateMP3) -> float:
         total = state.num_up_moves + state.num_down_moves
-        return get_unit_sigmoid_func(self.alpha3)(
-            state.num_down_moves / total
-        ) if total else 0.5
+        return (
+            get_unit_sigmoid_func(self.alpha3)(state.num_down_moves / total)
+            if total
+            else 0.5
+        )
 
     def transition(self, state: StateMP3) -> Categorical[StateMP3]:
         up_p = self.up_prob(state)
 
-        return Categorical({
-            StateMP3(state.num_up_moves + 1, state.num_down_moves): up_p,
-            StateMP3(state.num_up_moves, state.num_down_moves + 1): 1 - up_p
-        })
+        return Categorical(
+            {
+                StateMP3(state.num_up_moves + 1, state.num_down_moves): up_p,
+                StateMP3(state.num_up_moves, state.num_down_moves + 1): 1 - up_p,
+            }
+        )
 
 
 def process1_price_traces(
-    start_price: int,
-    level_param: int,
-    alpha1: float,
-    time_steps: int,
-    num_traces: int
+    start_price: int, level_param: int, alpha1: float, time_steps: int, num_traces: int
 ) -> np.ndarray:
     mp = StockPriceMP1(level_param=level_param, alpha1=alpha1)
     start_state_distribution = Constant(StateMP1(price=start_price))
-    return np.vstack([
-        np.fromiter((s.price for s in itertools.islice(
-            mp.simulate(start_state_distribution),
-            time_steps + 1
-        )), float) for _ in range(num_traces)])
+    return np.vstack(
+        [
+            np.fromiter(
+                (
+                    s.price
+                    for s in itertools.islice(
+                        mp.simulate(start_state_distribution), time_steps + 1
+                    )
+                ),
+                float,
+            )
+            for _ in range(num_traces)
+        ]
+    )
 
 
 def process2_price_traces(
-    start_price: int,
-    alpha2: float,
-    time_steps: int,
-    num_traces: int
+    start_price: int, alpha2: float, time_steps: int, num_traces: int
 ) -> np.ndarray:
     mp = StockPriceMP2(alpha2=alpha2)
     start_state_distribution = Constant(
         StateMP2(price=start_price, is_prev_move_up=None)
     )
-    return np.vstack([
-        np.fromiter((s.price for s in itertools.islice(
-            mp.simulate(start_state_distribution),
-            time_steps + 1
-        )), float) for _ in range(num_traces)])
+    return np.vstack(
+        [
+            np.fromiter(
+                (
+                    s.price
+                    for s in itertools.islice(
+                        mp.simulate(start_state_distribution), time_steps + 1
+                    )
+                ),
+                float,
+            )
+            for _ in range(num_traces)
+        ]
+    )
 
 
 def process3_price_traces(
-    start_price: int,
-    alpha3: float,
-    time_steps: int,
-    num_traces: int
+    start_price: int, alpha3: float, time_steps: int, num_traces: int
 ) -> np.ndarray:
     mp = StockPriceMP3(alpha3=alpha3)
-    start_state_distribution = Constant(
-        StateMP3(num_up_moves=0, num_down_moves=0)
+    start_state_distribution = Constant(StateMP3(num_up_moves=0, num_down_moves=0))
+    return np.vstack(
+        [
+            np.fromiter(
+                (
+                    start_price + s.num_up_moves - s.num_down_moves
+                    for s in itertools.islice(
+                        mp.simulate(start_state_distribution), time_steps + 1
+                    )
+                ),
+                float,
+            )
+            for _ in range(num_traces)
+        ]
     )
-    return np.vstack([np.fromiter(
-        (start_price + s.num_up_moves - s.num_down_moves for s in
-         itertools.islice(
-             mp.simulate(start_state_distribution),
-             time_steps + 1
-         )),
-        float
-    ) for _ in range(num_traces)])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start_price: int = 100
     level_param: int = 100
     alpha1: float = 0.25
@@ -153,19 +168,19 @@ if __name__ == '__main__':
         level_param=level_param,
         alpha1=alpha1,
         time_steps=time_steps,
-        num_traces=num_traces
+        num_traces=num_traces,
     )
     process2_traces: np.ndarray = process2_price_traces(
         start_price=start_price,
         alpha2=alpha2,
         time_steps=time_steps,
-        num_traces=num_traces
+        num_traces=num_traces,
     )
     process3_traces: np.ndarray = process3_price_traces(
         start_price=start_price,
         alpha3=alpha3,
         time_steps=time_steps,
-        num_traces=num_traces
+        num_traces=num_traces,
     )
 
     trace1 = process1_traces[0]
@@ -175,7 +190,5 @@ if __name__ == '__main__':
     plot_single_trace_all_processes(trace1, trace2, trace3)
 
     plot_distribution_at_time_all_processes(
-        process1_traces,
-        process2_traces,
-        process3_traces
+        process1_traces, process2_traces, process3_traces
     )

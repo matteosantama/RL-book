@@ -26,8 +26,7 @@ class MertonPortfolio:
         return self.r + self.allocation() * self.excess()
 
     def nu(self) -> float:
-        return (self.rho - (1 - self.gamma) * self.portfolio_return()) / \
-            self.gamma
+        return (self.rho - (1 - self.gamma) * self.portfolio_return()) / self.gamma
 
     def f(self, time: float) -> float:
         remaining: float = self.horizon - time
@@ -50,13 +49,15 @@ class MertonPortfolio:
         if nu == 0:
             ret = base * (1 - time / (self.horizon + self.epsilon))
         else:
-            ret = base * (1 - (1 - exp(-nu * time)) /
-                          (1 + (nu * self.epsilon - 1) *
-                           exp(-nu * self.horizon)))
+            ret = base * (
+                1
+                - (1 - exp(-nu * time))
+                / (1 + (nu * self.epsilon - 1) * exp(-nu * self.horizon))
+            )
         return ret
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from rl.gen_utils.plot_funcs import plot_list_of_curves
 
     mu: float = 0.1
@@ -66,14 +67,7 @@ if __name__ == '__main__':
     horizon: float = 20.0
     gamma: float = 2.0
 
-    mp = MertonPortfolio(
-        mu,
-        sigma,
-        r,
-        rho,
-        horizon,
-        gamma
-    )
+    mp = MertonPortfolio(mu, sigma, r, rho, horizon, gamma)
 
     intervals: float = 20
     time_steps = [i * horizon / intervals for i in range(intervals)]
@@ -82,31 +76,33 @@ if __name__ == '__main__':
         mp.fractional_consumption_rate(i) for i in time_steps
     ]
     expected_portfolio_return: float = mp.portfolio_return()
-    expected_wealth_growth: Sequence[float] = [mp.wealth_growth_rate(i)
-                                               for i in time_steps]
+    expected_wealth_growth: Sequence[float] = [
+        mp.wealth_growth_rate(i) for i in time_steps
+    ]
 
     plot_list_of_curves(
         [time_steps] * 3,
         [
             optimal_consumption_rate,
             expected_wealth_growth,
-            [expected_portfolio_return] * intervals
+            [expected_portfolio_return] * intervals,
         ],
         ["b", "g", "r"],
         [
-         "Fractional Consumption Rate",
-         "Expected Wealth Growth Rate",
-         "Expected Portfolio Annual Return = %.1f%%" %
-         (expected_portfolio_return * 100)
+            "Fractional Consumption Rate",
+            "Expected Wealth Growth Rate",
+            "Expected Portfolio Annual Return = %.1f%%"
+            % (expected_portfolio_return * 100),
         ],
         x_label="Time in years",
         y_label="Annual Rate",
-        title="Fractional Consumption and Expected Wealth Growth"
+        title="Fractional Consumption and Expected Wealth Growth",
     )
 
     extended_time_steps = time_steps + [horizon]
-    expected_wealth: Sequence[float] = [mp.expected_wealth(i)
-                                        for i in extended_time_steps]
+    expected_wealth: Sequence[float] = [
+        mp.expected_wealth(i) for i in extended_time_steps
+    ]
 
     plot_list_of_curves(
         [extended_time_steps],
@@ -115,5 +111,5 @@ if __name__ == '__main__':
         ["Expected Wealth"],
         x_label="Time in Years",
         y_label="Wealth",
-        title="Time-Trajectory of Expected Wealth"
+        title="Time-Trajectory of Expected Wealth",
     )

@@ -20,63 +20,65 @@ class OptimalExerciseBinTree:
 
     def european_price(self, is_call: bool, strike: float) -> float:
         sigma_sqrt: float = self.vol * np.sqrt(self.expiry)
-        d1: float = (np.log(self.spot_price / strike) +
-                     (self.rate + self.vol ** 2 / 2.) * self.expiry) \
-            / sigma_sqrt
+        d1: float = (
+            np.log(self.spot_price / strike)
+            + (self.rate + self.vol ** 2 / 2.0) * self.expiry
+        ) / sigma_sqrt
         d2: float = d1 - sigma_sqrt
         if is_call:
-            ret = self.spot_price * norm.cdf(d1) - \
-                strike * np.exp(-self.rate * self.expiry) * norm.cdf(d2)
+            ret = self.spot_price * norm.cdf(d1) - strike * np.exp(
+                -self.rate * self.expiry
+            ) * norm.cdf(d2)
         else:
-            ret = strike * np.exp(-self.rate * self.expiry) * norm.cdf(-d2) - \
-                self.spot_price * norm.cdf(-d1)
+            ret = strike * np.exp(-self.rate * self.expiry) * norm.cdf(
+                -d2
+            ) - self.spot_price * norm.cdf(-d1)
         return ret
 
     def dt(self) -> float:
         return self.expiry / self.num_steps
 
     def state_price(self, i: int, j: int) -> float:
-        return self.spot_price * np.exp((2 * j - i) * self.vol *
-                                        np.sqrt(self.dt()))
+        return self.spot_price * np.exp((2 * j - i) * self.vol * np.sqrt(self.dt()))
 
-    def get_opt_vf_and_policy(self) -> \
-            Iterator[Tuple[V[int], FinitePolicy[int, bool]]]:
+    def get_opt_vf_and_policy(self) -> Iterator[Tuple[V[int], FinitePolicy[int, bool]]]:
         dt: float = self.dt()
         up_factor: float = np.exp(self.vol * np.sqrt(dt))
-        up_prob: float = (np.exp(self.rate * dt) * up_factor - 1) / \
-            (up_factor * up_factor - 1)
+        up_prob: float = (np.exp(self.rate * dt) * up_factor - 1) / (
+            up_factor * up_factor - 1
+        )
         return optimal_vf_and_policy(
             steps=[
-                {j: None if j == -1 else {
-                    True: Constant(
-                        (
-                            -1,
-                            self.payoff(i * dt, self.state_price(i, j))
-                        )
-                    ),
-                    False: Categorical(
-                        {
-                            (j + 1, 0.): up_prob,
-                            (j, 0.): 1 - up_prob
-                        }
-                    )
-                } for j in range(i + 1)}
+                {
+                    j: None
+                    if j == -1
+                    else {
+                        True: Constant(
+                            (-1, self.payoff(i * dt, self.state_price(i, j)))
+                        ),
+                        False: Categorical(
+                            {(j + 1, 0.0): up_prob, (j, 0.0): 1 - up_prob}
+                        ),
+                    }
+                    for j in range(i + 1)
+                }
                 for i in range(self.num_steps + 1)
             ],
-            gamma=np.exp(-self.rate * dt)
+            gamma=np.exp(-self.rate * dt),
         )
 
     def option_exercise_boundary(
-        self,
-        policy_seq: Sequence[FinitePolicy[int, bool]],
-        is_call: bool
+        self, policy_seq: Sequence[FinitePolicy[int, bool]], is_call: bool
     ) -> Sequence[Tuple[float, float]]:
         dt: float = self.dt()
         ex_boundary: List[Tuple[float, float]] = []
         for i in range(self.num_steps + 1):
-            ex_points = [j for j in range(i + 1)
-                         if policy_seq[i].act(j).value and
-                         self.payoff(i * dt, self.state_price(i, j)) > 0]
+            ex_points = [
+                j
+                for j in range(i + 1)
+                if policy_seq[i].act(j).value
+                and self.payoff(i * dt, self.state_price(i, j)) > 0
+            ]
             if len(ex_points) > 0:
                 boundary_pt = min(ex_points) if is_call else max(ex_points)
                 ex_boundary.append(
@@ -85,8 +87,9 @@ class OptimalExerciseBinTree:
         return ex_boundary
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from rl.gen_utils.plot_funcs import plot_list_of_curves
+
     spot_price_val: float = 100.0
     strike: float = 100.0
     is_call: bool = False
@@ -106,12 +109,13 @@ if __name__ == '__main__':
         expiry=expiry_val,
         rate=rate_val,
         vol=vol_val,
-        num_steps=num_steps_val
+        num_steps=num_steps_val,
     )
 
     vf_seq, policy_seq = zip(*opt_ex_bin_tree.get_opt_vf_and_policy())
-    ex_boundary: Sequence[Tuple[float, float]] = \
-        opt_ex_bin_tree.option_exercise_boundary(policy_seq, is_call)
+    ex_boundary: Sequence[
+        Tuple[float, float]
+    ] = opt_ex_bin_tree.option_exercise_boundary(policy_seq, is_call)
     time_pts, ex_bound_pts = zip(*ex_boundary)
     label = ("Call" if is_call else "Put") + " Option Exercise Boundary"
     plot_list_of_curves(
@@ -121,7 +125,7 @@ if __name__ == '__main__':
         list_of_curve_labels=[label],
         x_label="Time",
         y_label="Underlying Price",
-        title=label
+        title=label,
     )
 
     european: float = opt_ex_bin_tree.european_price(is_call, strike)

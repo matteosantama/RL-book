@@ -19,6 +19,7 @@ class MaxExpUtility:
     where a is the risk-aversion parameter. We assume the risky asset
     follows a normal distribution at t=1.
     """
+
     risky_spot: float  # risky asset price at t=0
     riskless_rate: float  # riskless asset price grows from 1 to 1+r
     risky_mean: float  # mean of risky asset price at t=1
@@ -42,14 +43,12 @@ class MaxExpUtility:
         v1 = self.payoff_func(x)
         v2 = self.payoff_func(z)
         alpha = (v1 - v2) / (z - x)
-        beta = - 1 / (1 + self.riskless_rate) * (v1 + alpha * x)
-        price = - (beta + alpha * self.risky_spot)
+        beta = -1 / (1 + self.riskless_rate) * (v1 + alpha * x)
+        price = -(beta + alpha * self.risky_spot)
         return {"price": price, "alpha": alpha, "beta": beta}
 
     def max_exp_util_for_zero(
-        self,
-        c: float,
-        risk_aversion_param: float
+        self, c: float, risk_aversion_param: float
     ) -> Mapping[str, float]:
         """
         This implements the closed-form solution when the derivative
@@ -64,16 +63,17 @@ class MaxExpUtility:
         sigma = self.risky_stdev
         s0 = self.risky_spot
         alpha = (mu - s0 * er) / (ra * sigma * sigma)
-        beta = - (c + alpha * self.risky_spot)
-        max_val = (1 - np.exp(-ra * (-er * c + alpha * (mu - s0 * er))
-                              + (ra * alpha * sigma) ** 2 / 2)) / ra
+        beta = -(c + alpha * self.risky_spot)
+        max_val = (
+            1
+            - np.exp(
+                -ra * (-er * c + alpha * (mu - s0 * er)) + (ra * alpha * sigma) ** 2 / 2
+            )
+        ) / ra
         return {"alpha": alpha, "beta": beta, "max_val": max_val}
 
     def max_exp_util(
-        self,
-        c: float,
-        pf: Callable[[float], float],
-        risk_aversion_param: float
+        self, c: float, pf: Callable[[float], float], risk_aversion_param: float
     ) -> Mapping[str, float]:
         sigma2 = self.risky_stdev * self.risky_stdev
         mu = self.risky_mean
@@ -85,37 +85,32 @@ class MaxExpUtility:
         integral_ub = self.risky_mean + self.risky_stdev * 6
 
         def eval_expectation(alpha: float, c=c) -> float:
-
             def integrand(rand: float, alpha=alpha, c=c) -> float:
-                payoff = pf(rand) - er * c\
-                         + alpha * (rand - er * s0)
-                exponent = -(0.5 * (rand - mu) * (rand - mu) / sigma2
-                             + risk_aversion_param * payoff)
+                payoff = pf(rand) - er * c + alpha * (rand - er * s0)
+                exponent = -(
+                    0.5 * (rand - mu) * (rand - mu) / sigma2
+                    + risk_aversion_param * payoff
+                )
                 return (1 - factor * np.exp(exponent)) / risk_aversion_param
 
             return -quad(integrand, integral_lb, integral_ub)[0]
 
         res = minimize_scalar(eval_expectation)
         alpha_star = res["x"]
-        max_val = - res["fun"]
-        beta_star = - (c + alpha_star * s0)
+        max_val = -res["fun"]
+        beta_star = -(c + alpha_star * s0)
         return {"alpha": alpha_star, "beta": beta_star, "max_val": max_val}
 
     def max_exp_util_price_and_hedge(
-        self,
-        risk_aversion_param: float
+        self, risk_aversion_param: float
     ) -> Mapping[str, float]:
-        meu_for_zero = self.max_exp_util_for_zero(
-            0.,
-            risk_aversion_param
-        )["max_val"]
+        meu_for_zero = self.max_exp_util_for_zero(0.0, risk_aversion_param)["max_val"]
 
         def prep_func(pr: float) -> float:
-            return self.max_exp_util(
-                pr,
-                self.payoff_func,
-                risk_aversion_param
-            )["max_val"] - meu_for_zero
+            return (
+                self.max_exp_util(pr, self.payoff_func, risk_aversion_param)["max_val"]
+                - meu_for_zero
+            )
 
         lb = self.risky_mean - self.risky_stdev * 10
         ub = self.risky_mean + self.risky_stdev * 10
@@ -124,22 +119,16 @@ class MaxExpUtility:
         ub_payoff = max(payoff_vals)
 
         opt_price = root_scalar(
-            prep_func,
-            bracket=[lb_payoff, ub_payoff],
-            method="brentq"
+            prep_func, bracket=[lb_payoff, ub_payoff], method="brentq"
         ).root
 
-        hedges = self.max_exp_util(
-            opt_price,
-            self.payoff_func,
-            risk_aversion_param
-        )
+        hedges = self.max_exp_util(opt_price, self.payoff_func, risk_aversion_param)
         alpha = hedges["alpha"]
         beta = hedges["beta"]
         return {"price": opt_price, "alpha": alpha, "beta": beta}
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     risky_spot_val: float = 100.0
@@ -148,8 +137,8 @@ if __name__ == '__main__':
     risky_stdev_val: float = 25.0
     payoff_function: Callable[[float], float] = lambda x: max(x - 105.0, 0)
 
-    b1 = riskless_rate_val >= 0.
-    b2 = risky_stdev_val > 0.
+    b1 = riskless_rate_val >= 0.0
+    b2 = risky_stdev_val > 0.0
     x = risky_spot_val * (1 + riskless_rate_val)
     b3 = risky_mean_val > x > risky_mean_val - risky_stdev_val
     assert all([b1, b2, b3]), "Bad Inputs"
@@ -159,7 +148,7 @@ if __name__ == '__main__':
         riskless_rate=riskless_rate_val,
         risky_mean=risky_mean_val,
         risky_stdev=risky_stdev_val,
-        payoff_func=payoff_function
+        payoff_func=payoff_function,
     )
 
     plt.xlabel("Risky Asset Price")
@@ -169,39 +158,29 @@ if __name__ == '__main__':
     ub = meu.risky_mean + meu.risky_stdev * 1.5
     x_plot_pts = np.linspace(lb, ub, 1001)
     payoff_plot_pts = np.array([meu.payoff_func(x) for x in x_plot_pts])
-    plt.plot(
-        x_plot_pts,
-        payoff_plot_pts,
-        "r",
-        linewidth=3,
-        label="Derivative Payoff"
-    )
+    plt.plot(x_plot_pts, payoff_plot_pts, "r", linewidth=3, label="Derivative Payoff")
     cm_ph = meu.complete_mkt_price_and_hedges()
-    cm_plot_pts = - (cm_ph["beta"] + cm_ph["alpha"] * x_plot_pts)
+    cm_plot_pts = -(cm_ph["beta"] + cm_ph["alpha"] * x_plot_pts)
     plt.plot(
-        x_plot_pts,
-        cm_plot_pts,
-        "b",
-        linestyle="dashed",
-        label="Complete Market Hedge"
+        x_plot_pts, cm_plot_pts, "b", linestyle="dashed", label="Complete Market Hedge"
     )
     print("Complete Market Price = %.3f" % cm_ph["price"])
     print("Complete Market Alpha = %.3f" % cm_ph["alpha"])
     print("Complete Market Beta = %.3f" % cm_ph["beta"])
     for risk_aversion_param, color in [(0.3, "g"), (0.6, "y"), (0.9, "m")]:
         print("--- Risk Aversion Param = %.2f ---" % risk_aversion_param)
-        meu_for_zero = meu.max_exp_util_for_zero(0., risk_aversion_param)
+        meu_for_zero = meu.max_exp_util_for_zero(0.0, risk_aversion_param)
         print("MEU for Zero Alpha = %.3f" % meu_for_zero["alpha"])
         print("MEU for Zero Beta = %.3f" % meu_for_zero["beta"])
         print("MEU for Zero Max Val = %.3f" % meu_for_zero["max_val"])
         res2 = meu.max_exp_util_price_and_hedge(risk_aversion_param)
         print(res2)
-        im_plot_pts = - (res2["beta"] + res2["alpha"] * x_plot_pts)
+        im_plot_pts = -(res2["beta"] + res2["alpha"] * x_plot_pts)
         plt.plot(
             x_plot_pts,
             im_plot_pts,
             color,
-            label="Hedge for Risk-Aversion = %.1f" % risk_aversion_param
+            label="Hedge for Risk-Aversion = %.1f" % risk_aversion_param,
         )
 
     plt.xlim(lb, ub)

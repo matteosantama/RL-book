@@ -20,13 +20,12 @@ InvOrderMapping = StateActionMapping[InventoryState, int]
 
 
 class SimpleInventoryMDPCap(FiniteMarkovDecisionProcess[InventoryState, int]):
-
     def __init__(
         self,
         capacity: int,
         poisson_lambda: float,
         holding_cost: float,
-        stockout_cost: float
+        stockout_cost: float,
     ):
         self.capacity: int = capacity
         self.poisson_lambda: float = poisson_lambda
@@ -37,34 +36,39 @@ class SimpleInventoryMDPCap(FiniteMarkovDecisionProcess[InventoryState, int]):
         super().__init__(self.get_action_transition_reward_map())
 
     def get_action_transition_reward_map(self) -> InvOrderMapping:
-        d: Dict[InventoryState, Dict[int, Categorical[Tuple[InventoryState,
-                                                            float]]]] = {}
+        d: Dict[
+            InventoryState, Dict[int, Categorical[Tuple[InventoryState, float]]]
+        ] = {}
 
         for alpha in range(self.capacity + 1):
             for beta in range(self.capacity + 1 - alpha):
                 state: InventoryState = InventoryState(alpha, beta)
                 ip: int = state.inventory_position()
-                base_reward: float = - self.holding_cost * alpha
+                base_reward: float = -self.holding_cost * alpha
                 d1: Dict[int, Categorical[Tuple[InventoryState, float]]] = {}
 
                 for order in range(self.capacity - ip + 1):
-                    sr_probs_dict: Dict[Tuple[InventoryState, float], float] =\
-                        {(InventoryState(ip - i, order), base_reward):
-                         self.poisson_distr.pmf(i) for i in range(ip)}
+                    sr_probs_dict: Dict[Tuple[InventoryState, float], float] = {
+                        (
+                            InventoryState(ip - i, order),
+                            base_reward,
+                        ): self.poisson_distr.pmf(i)
+                        for i in range(ip)
+                    }
 
                     probability: float = 1 - self.poisson_distr.cdf(ip - 1)
-                    reward: float = base_reward - self.stockout_cost *\
-                        (probability * (self.poisson_lambda - ip) +
-                         ip * self.poisson_distr.pmf(ip))
-                    sr_probs_dict[(InventoryState(0, order), reward)] = \
-                        probability
+                    reward: float = base_reward - self.stockout_cost * (
+                        probability * (self.poisson_lambda - ip)
+                        + ip * self.poisson_distr.pmf(ip)
+                    )
+                    sr_probs_dict[(InventoryState(0, order), reward)] = probability
                     d1[order] = Categorical(sr_probs_dict)
 
                 d[state] = d1
         return d
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from pprint import pprint
 
     user_capacity = 2
@@ -74,30 +78,32 @@ if __name__ == '__main__':
 
     user_gamma = 0.9
 
-    si_mdp: FiniteMarkovDecisionProcess[InventoryState, int] =\
-        SimpleInventoryMDPCap(
-            capacity=user_capacity,
-            poisson_lambda=user_poisson_lambda,
-            holding_cost=user_holding_cost,
-            stockout_cost=user_stockout_cost
-        )
+    si_mdp: FiniteMarkovDecisionProcess[InventoryState, int] = SimpleInventoryMDPCap(
+        capacity=user_capacity,
+        poisson_lambda=user_poisson_lambda,
+        holding_cost=user_holding_cost,
+        stockout_cost=user_stockout_cost,
+    )
 
     print("MDP Transition Map")
     print("------------------")
     print(si_mdp)
 
     fdp: FinitePolicy[InventoryState, int] = FinitePolicy(
-        {InventoryState(alpha, beta):
-         Constant(user_capacity - (alpha + beta)) for alpha in
-         range(user_capacity + 1) for beta in range(user_capacity + 1 - alpha)}
+        {
+            InventoryState(alpha, beta): Constant(user_capacity - (alpha + beta))
+            for alpha in range(user_capacity + 1)
+            for beta in range(user_capacity + 1 - alpha)
+        }
     )
 
     print("Policy Map")
     print("----------")
     print(fdp)
 
-    implied_mrp: FiniteMarkovRewardProcess[InventoryState] =\
-        si_mdp.apply_finite_policy(fdp)
+    implied_mrp: FiniteMarkovRewardProcess[InventoryState] = si_mdp.apply_finite_policy(
+        fdp
+    )
     print("Implied MP Transition Map")
     print("--------------")
     print(FiniteMarkovProcess(implied_mrp.transition_map))
@@ -132,10 +138,7 @@ if __name__ == '__main__':
 
     print("MDP Policy Iteration Optimal Value Function and Optimal Policy")
     print("--------------")
-    opt_vf_pi, opt_policy_pi = policy_iteration_result(
-        si_mdp,
-        gamma=user_gamma
-    )
+    opt_vf_pi, opt_policy_pi = policy_iteration_result(si_mdp, gamma=user_gamma)
     pprint(opt_vf_pi)
     print(opt_policy_pi)
     print()

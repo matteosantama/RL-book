@@ -3,13 +3,15 @@ import operator
 from typing import Mapping, Iterator, TypeVar, Tuple, Dict
 
 from rl.iterate import converged, iterate
-from rl.markov_decision_process import (FiniteMarkovDecisionProcess,
-                                        FiniteMarkovRewardProcess,
-                                        FinitePolicy)
+from rl.markov_decision_process import (
+    FiniteMarkovDecisionProcess,
+    FiniteMarkovRewardProcess,
+    FinitePolicy,
+)
 from rl.distribution import FiniteDistribution, Categorical, Constant, Choose
 
-A = TypeVar('A')
-S = TypeVar('S')
+A = TypeVar("A")
+S = TypeVar("S")
 
 DEFAULT_TOLERANCE = 1e-5
 
@@ -19,16 +21,14 @@ V = Mapping[S, float]
 
 
 def evaluate_mrp(
-    mrp: FiniteMarkovRewardProcess[S],
-    gamma: float
+    mrp: FiniteMarkovRewardProcess[S], gamma: float
 ) -> Iterator[np.ndarray]:
-    '''Iteratively calculate the value function for the give Markov reward
+    """Iteratively calculate the value function for the give Markov reward
     process.
+    """
 
-    '''
     def update(v: np.ndarray) -> np.ndarray:
-        return mrp.reward_function_vec + gamma * \
-            mrp.get_transition_matrix().dot(v)
+        return mrp.reward_function_vec + gamma * mrp.get_transition_matrix().dot(v)
 
     v_0: np.ndarray = np.zeros(len(mrp.non_terminal_states))
 
@@ -36,44 +36,39 @@ def evaluate_mrp(
 
 
 def almost_equal_np_arrays(
-    v1: np.ndarray,
-    v2: np.ndarray,
-    tolerance: float = DEFAULT_TOLERANCE
+    v1: np.ndarray, v2: np.ndarray, tolerance: float = DEFAULT_TOLERANCE
 ) -> bool:
-    '''Return whether the two value functions as np.ndarray are within the
+    """Return whether the two value functions as np.ndarray are within the
     given tolerance of each other.
-
-    '''
+    """
     return max(abs(v1 - v2)) < tolerance
 
 
-def evaluate_mrp_result(
-    mrp: FiniteMarkovRewardProcess[S],
-    gamma: float
-) -> V[S]:
+def evaluate_mrp_result(mrp: FiniteMarkovRewardProcess[S], gamma: float) -> V[S]:
     v_star: np.ndarray = converged(
-        evaluate_mrp(mrp, gamma=gamma),
-        done=almost_equal_np_arrays
+        evaluate_mrp(mrp, gamma=gamma), done=almost_equal_np_arrays
     )
     return {s: v_star[i] for i, s in enumerate(mrp.non_terminal_states)}
 
 
 def greedy_policy_from_vf(
-    mdp: FiniteMarkovDecisionProcess[S, A],
-    vf: V[S],
-    gamma: float
+    mdp: FiniteMarkovDecisionProcess[S, A], vf: V[S], gamma: float
 ) -> FinitePolicy[S, A]:
     greedy_policy_dict: Dict[S, FiniteDistribution[A]] = {}
 
     for s in mdp.non_terminal_states:
 
-        q_values: Iterator[Tuple[A, float]] = \
-            ((a, mdp.mapping[s][a].expectation(
-                lambda s_r: s_r[1] + gamma * vf.get(s_r[0], 0.)
-            )) for a in mdp.actions(s))
+        q_values: Iterator[Tuple[A, float]] = (
+            (
+                a,
+                mdp.mapping[s][a].expectation(
+                    lambda s_r: s_r[1] + gamma * vf.get(s_r[0], 0.0)
+                ),
+            )
+            for a in mdp.actions(s)
+        )
 
-        greedy_policy_dict[s] =\
-            Constant(max(q_values, key=operator.itemgetter(1))[0])
+        greedy_policy_dict[s] = Constant(max(q_values, key=operator.itemgetter(1))[0])
 
     return FinitePolicy(greedy_policy_dict)
 
@@ -81,25 +76,27 @@ def greedy_policy_from_vf(
 def policy_iteration(
     mdp: FiniteMarkovDecisionProcess[S, A],
     gamma: float,
-    matrix_method_for_mrp_eval: bool = False
+    matrix_method_for_mrp_eval: bool = False,
 ) -> Iterator[Tuple[V[S], FinitePolicy[S, A]]]:
-    '''Calculate the value function (V*) of the given MDP by improving
+    """Calculate the value function (V*) of the given MDP by improving
     the policy repeatedly after evaluating the value function for a policy
-    '''
+    """
 
-    def update(vf_policy: Tuple[V[S], FinitePolicy[S, A]])\
-            -> Tuple[V[S], FinitePolicy[S, A]]:
+    def update(
+        vf_policy: Tuple[V[S], FinitePolicy[S, A]]
+    ) -> Tuple[V[S], FinitePolicy[S, A]]:
 
         vf, pi = vf_policy
         mrp: FiniteMarkovRewardProcess[S] = mdp.apply_finite_policy(pi)
-        policy_vf: V[S] = {mrp.non_terminal_states[i]: v for i, v in
-                           enumerate(mrp.get_value_function_vec(gamma))}\
-            if matrix_method_for_mrp_eval else evaluate_mrp_result(mrp, gamma)
-        improved_pi: FinitePolicy[S, A] = greedy_policy_from_vf(
-            mdp,
-            policy_vf,
-            gamma
+        policy_vf: V[S] = (
+            {
+                mrp.non_terminal_states[i]: v
+                for i, v in enumerate(mrp.get_value_function_vec(gamma))
+            }
+            if matrix_method_for_mrp_eval
+            else evaluate_mrp_result(mrp, gamma)
         )
+        improved_pi: FinitePolicy[S, A] = greedy_policy_from_vf(mdp, policy_vf, gamma)
 
         return policy_vf, improved_pi
 
@@ -111,12 +108,9 @@ def policy_iteration(
 
 
 def almost_equal_vf_pis(
-    x1: Tuple[V[S], FinitePolicy[S, A]],
-    x2: Tuple[V[S], FinitePolicy[S, A]]
+    x1: Tuple[V[S], FinitePolicy[S, A]], x2: Tuple[V[S], FinitePolicy[S, A]]
 ) -> bool:
-    return max(
-        abs(x1[0][s] - x2[0][s]) for s in x1[0]
-    ) < DEFAULT_TOLERANCE
+    return max(abs(x1[0][s] - x2[0][s]) for s in x1[0]) < DEFAULT_TOLERANCE
 
 
 def policy_iteration_result(
@@ -127,59 +121,51 @@ def policy_iteration_result(
 
 
 def value_iteration(
-    mdp: FiniteMarkovDecisionProcess[S, A],
-    gamma: float
+    mdp: FiniteMarkovDecisionProcess[S, A], gamma: float
 ) -> Iterator[V[S]]:
-    '''Calculate the value function (V*) of the given MDP by applying the
+    """Calculate the value function (V*) of the given MDP by applying the
     update function repeatedly until the values converge.
+    """
 
-    '''
     def update(v: V[S]) -> V[S]:
-        return {s: max(mdp.mapping[s][a].expectation(
-            lambda s_r: s_r[1] + gamma * v.get(s_r[0], 0.)
-        ) for a in mdp.actions(s)) for s in v}
+        return {
+            s: max(
+                mdp.mapping[s][a].expectation(
+                    lambda s_r: s_r[1] + gamma * v.get(s_r[0], 0.0)
+                )
+                for a in mdp.actions(s)
+            )
+            for s in v
+        }
 
     v_0: V[S] = {s: 0.0 for s in mdp.non_terminal_states}
     return iterate(update, v_0)
 
 
-def almost_equal_vfs(
-    v1: V[S],
-    v2: V[S],
-    tolerance: float = DEFAULT_TOLERANCE
-) -> bool:
-    '''Return whether the two value function tables are within the given
+def almost_equal_vfs(v1: V[S], v2: V[S], tolerance: float = DEFAULT_TOLERANCE) -> bool:
+    """Return whether the two value function tables are within the given
     tolerance of each other.
-
-    '''
+    """
     return max(abs(v1[s] - v2[s]) for s in v1) < tolerance
 
 
 def value_iteration_result(
-    mdp: FiniteMarkovDecisionProcess[S, A],
-    gamma: float
+    mdp: FiniteMarkovDecisionProcess[S, A], gamma: float
 ) -> Tuple[V[S], FinitePolicy[S, A]]:
-    opt_vf: V[S] = converged(
-        value_iteration(mdp, gamma),
-        done=almost_equal_vfs
-    )
-    opt_policy: FinitePolicy[S, A] = greedy_policy_from_vf(
-        mdp,
-        opt_vf,
-        gamma
-    )
+    opt_vf: V[S] = converged(value_iteration(mdp, gamma), done=almost_equal_vfs)
+    opt_policy: FinitePolicy[S, A] = greedy_policy_from_vf(mdp, opt_vf, gamma)
 
     return opt_vf, opt_policy
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     from pprint import pprint
 
     transition_reward_map = {
         1: Categorical({(1, 7.0): 0.6, (2, 5.0): 0.3, (3, 2.0): 0.1}),
         2: Categorical({(1, -2.0): 0.1, (2, 4.0): 0.2, (3, 0.0): 0.7}),
-        3: Categorical({(1, 3.0): 0.2, (2, 8.0): 0.6, (3, 4.0): 0.2})
+        3: Categorical({(1, 3.0): 0.2, (2, 8.0): 0.6, (3, 4.0): 0.2}),
     }
     gamma = 0.9
 

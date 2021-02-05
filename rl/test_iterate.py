@@ -1,7 +1,7 @@
 import itertools
 import unittest
 
-from rl.iterate import (iterate, last, converge, converged)
+from rl.iterate import iterate, last, converge, converged
 
 
 class TestIterate(unittest.TestCase):
@@ -32,10 +32,11 @@ class TestConverge(unittest.TestCase):
             self.assertAlmostEqual(got, expected, places=2)
 
     def test_converge_end(self):
-        '''Check that converge ends the iterator at the right place when the
+        """Check that converge ends the iterator at the right place when the
         underlying iterator ends before converging.
 
-        '''
+        """
+
         def close(a, b):
             return abs(a - b) < 0.1
 

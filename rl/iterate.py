@@ -1,16 +1,16 @@
-'''Finding fixed points of functions using iterators.'''
+"""Finding fixed points of functions using iterators."""
 import itertools
-from typing import (overload, Callable, Iterable, Iterator, Optional, TypeVar)
+from typing import overload, Callable, Iterable, Iterator, Optional, TypeVar
 
-X = TypeVar('X')
-Y = TypeVar('Y')
+X = TypeVar("X")
+Y = TypeVar("Y")
 
 
 # It would be more efficient if you iterated in place instead of
 # returning a copy of the value each time, but the functional version
 # of the code is a lot cleaner and easier to work with.
 def iterate(step: Callable[[X], X], start: X) -> Iterator[X]:
-    '''Find the fixed point of a function f by applying it to its own
+    """Find the fixed point of a function f by applying it to its own
     result, yielding each intermediate value.
 
     That is, for a function f, iterate(f, x) will give us a generator
@@ -18,7 +18,7 @@ def iterate(step: Callable[[X], X], start: X) -> Iterator[X]:
 
     x, f(x), f(f(x)), f(f(f(x)))...
 
-    '''
+    """
     state = start
 
     while True:
@@ -27,12 +27,12 @@ def iterate(step: Callable[[X], X], start: X) -> Iterator[X]:
 
 
 def last(values: Iterator[X]) -> Optional[X]:
-    '''Return the last value of the given iterator.
+    """Return the last value of the given iterator.
 
     Returns None if the iterator is empty.
 
     If the iterator does not end, this function will loop forever.
-    '''
+    """
     try:
         *_, last_element = values
         return last_element
@@ -41,14 +41,14 @@ def last(values: Iterator[X]) -> Optional[X]:
 
 
 def converge(values: Iterator[X], done: Callable[[X, X], bool]) -> Iterator[X]:
-    '''Read from an iterator until two consecutive values satisfy the
+    """Read from an iterator until two consecutive values satisfy the
     given done function or the input iterator ends.
 
     Raises an error if the input iterator is empty.
 
     Will loop forever if the input iterator doesn't end *or* converge.
 
-    '''
+    """
     a = next(values, None)
     if a is None:
         return
@@ -63,15 +63,14 @@ def converge(values: Iterator[X], done: Callable[[X, X], bool]) -> Iterator[X]:
         yield b
 
 
-def converged(values: Iterator[X],
-              done: Callable[[X, X], bool]) -> X:
-    '''Return the final value of the given iterator when its values
+def converged(values: Iterator[X], done: Callable[[X, X], bool]) -> X:
+    """Return the final value of the given iterator when its values
     converge according to the done function.
 
     Raises an error if the iterator is empty.
 
     Will loop forever if the input iterator doesn't end *or* converge.
-    '''
+    """
     result = last(converge(values, done))
 
     if result is None:
@@ -81,12 +80,9 @@ def converged(values: Iterator[X],
 
 
 def accumulate(
-        iterable: Iterable[X],
-        func: Callable[[Y, X], Y],
-        *,
-        initial: Optional[Y]
+    iterable: Iterable[X], func: Callable[[Y, X], Y], *, initial: Optional[Y]
 ) -> Iterator[Y]:
-    '''Make an iterator that returns accumulated sums, or accumulated
+    """Make an iterator that returns accumulated sums, or accumulated
     results of other binary functions (specified via the optional func
     argument).
 
@@ -101,7 +97,7 @@ def accumulate(
     the accumulation leads off with the initial value so that the
     output has one more element than the input iterable.
 
-    '''
+    """
     if initial is not None:
         iterable = itertools.chain([initial], iterable)  # type: ignore
 

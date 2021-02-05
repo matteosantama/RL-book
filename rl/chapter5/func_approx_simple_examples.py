@@ -1,8 +1,7 @@
 from typing import Tuple, Sequence, Iterator, List
 from scipy.stats import norm
 import numpy as np
-from rl.function_approx import LinearFunctionApprox, DNNApprox, \
-    AdamGradient, DNNSpec
+from rl.function_approx import LinearFunctionApprox, DNNApprox, AdamGradient, DNNSpec
 from itertools import islice
 from rl.gen_utils.plot_funcs import plot_list_of_curves
 
@@ -13,20 +12,18 @@ DataSeq = Sequence[Tuple[Triple, float]]
 
 def example_model_data_generator() -> Iterator[Tuple[Triple, float]]:
 
-    coeffs: Aug_Triple = (2., 10., 4., -6.)
-    d = norm(loc=0., scale=0.3)
+    coeffs: Aug_Triple = (2.0, 10.0, 4.0, -6.0)
+    d = norm(loc=0.0, scale=0.3)
 
     while True:
         pt: np.ndarray = np.random.randn(3)
         x_val: Triple = (pt[0], pt[1], pt[2])
-        y_val: float = coeffs[0] + np.dot(coeffs[1:], pt) + \
-            d.rvs(size=1)[0]
+        y_val: float = coeffs[0] + np.dot(coeffs[1:], pt) + d.rvs(size=1)[0]
         yield (x_val, y_val)
 
 
 def data_seq_generator(
-    data_generator: Iterator[Tuple[Triple, float]],
-    num_pts: int
+    data_generator: Iterator[Tuple[Triple, float]], num_pts: int
 ) -> Iterator[DataSeq]:
     while True:
         pts: DataSeq = list(islice(data_generator, num_pts))
@@ -34,25 +31,21 @@ def data_seq_generator(
 
 
 def feature_functions():
-    return [lambda _: 1., lambda x: x[0], lambda x: x[1], lambda x: x[2]]
+    return [lambda _: 1.0, lambda x: x[0], lambda x: x[1], lambda x: x[2]]
 
 
 def adam_gradient():
-    return AdamGradient(
-        learning_rate=0.1,
-        decay1=0.9,
-        decay2=0.999
-    )
+    return AdamGradient(learning_rate=0.1, decay1=0.9, decay2=0.999)
 
 
 def get_linear_model() -> LinearFunctionApprox[Triple]:
     ffs = feature_functions()
     ag = adam_gradient()
     return LinearFunctionApprox.create(
-         feature_functions=ffs,
-         adam_gradient=ag,
-         regularization_coeff=0.,
-         direct_solve=True
+        feature_functions=ffs,
+        adam_gradient=ag,
+        regularization_coeff=0.0,
+        direct_solve=True,
     )
 
 
@@ -61,10 +54,10 @@ def get_dnn_model() -> DNNApprox[Triple]:
     ag = adam_gradient()
 
     def relu(arg: np.ndarray) -> np.ndarray:
-        return np.vectorize(lambda x: x if x > 0. else 0.)(arg)
+        return np.vectorize(lambda x: x if x > 0.0 else 0.0)(arg)
 
     def relu_deriv(res: np.ndarray) -> np.ndarray:
-        return np.vectorize(lambda x: 1. if x > 0. else 0.)(res)
+        return np.vectorize(lambda x: 1.0 if x > 0.0 else 0.0)(res)
 
     def identity(arg: np.ndarray) -> np.ndarray:
         return arg
@@ -78,30 +71,27 @@ def get_dnn_model() -> DNNApprox[Triple]:
         hidden_activation=relu,
         hidden_activation_deriv=relu_deriv,
         output_activation=identity,
-        output_activation_deriv=identity_deriv
+        output_activation_deriv=identity_deriv,
     )
 
     return DNNApprox.create(
-        feature_functions=ffs,
-        dnn_spec=ds,
-        adam_gradient=ag,
-        regularization_coeff=0.05
+        feature_functions=ffs, dnn_spec=ds, adam_gradient=ag, regularization_coeff=0.05
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     training_num_pts: int = 1000
     test_num_pts: int = 10000
     training_iterations: int = 300
     data_gen: Iterator[Tuple[Triple, float]] = example_model_data_generator()
     training_data_gen: Iterator[DataSeq] = data_seq_generator(
-        data_gen,
-        training_num_pts
+        data_gen, training_num_pts
     )
     test_data: DataSeq = list(islice(data_gen, test_num_pts))
 
-    direct_solve_lfa: LinearFunctionApprox[Triple] = \
-        get_linear_model().solve(next(training_data_gen))
+    direct_solve_lfa: LinearFunctionApprox[Triple] = get_linear_model().solve(
+        next(training_data_gen)
+    )
     direct_solve_rmse: float = direct_solve_lfa.rmse(test_data)
     print(f"Linear Model Direct Solve RMSE = {direct_solve_rmse:.3f}")
     print("-----------------------------")
@@ -110,8 +100,7 @@ if __name__ == '__main__':
     print("----------------")
     linear_model_rmse_seq: List[float] = []
     for lfa in islice(
-        get_linear_model().iterate_updates(training_data_gen),
-        training_iterations
+        get_linear_model().iterate_updates(training_data_gen), training_iterations
     ):
         this_rmse: float = lfa.rmse(test_data)
         linear_model_rmse_seq.append(this_rmse)
@@ -122,8 +111,7 @@ if __name__ == '__main__':
     print("-------------")
     dnn_model_rmse_seq: List[float] = []
     for dfa in islice(
-        get_dnn_model().iterate_updates(training_data_gen),
-        training_iterations
+        get_dnn_model().iterate_updates(training_data_gen), training_iterations
     ):
         this_rmse: float = dfa.rmse(test_data)
         dnn_model_rmse_seq.append(this_rmse)
@@ -138,5 +126,5 @@ if __name__ == '__main__':
         list_of_curve_labels=["Linear Model", "Deep Neural Network Model"],
         x_label="Iterations of Gradient Descent",
         y_label="Root Mean Square Error",
-        title="RMSE across Iterations of Gradient Descent"
+        title="RMSE across Iterations of Gradient Descent",
     )

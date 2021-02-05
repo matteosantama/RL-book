@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from rl.function_approx import (Dynamic)
+from rl.function_approx import Dynamic
 
 
 class TestDynamic(unittest.TestCase):
@@ -22,13 +22,11 @@ class TestDynamic(unittest.TestCase):
 
     def test_evaluate(self):
         np.testing.assert_array_almost_equal(
-            self.dynamic_0.evaluate([0, 1, 2]),
-            np.array([0.0, 0.0, 0.0])
+            self.dynamic_0.evaluate([0, 1, 2]), np.array([0.0, 0.0, 0.0])
         )
 
         np.testing.assert_array_almost_equal(
-            self.dynamic_1.evaluate([0, 1, 2]),
-            np.array([1.0, 2.0, 3.0])
+            self.dynamic_1.evaluate([0, 1, 2]), np.array([1.0, 2.0, 3.0])
         )
 
     def test_call(self):
@@ -38,9 +36,7 @@ class TestDynamic(unittest.TestCase):
 
     def test_within(self):
         self.assertTrue(self.dynamic_0.within(self.dynamic_0, tolerance=0.0))
-        self.assertTrue(self.dynamic_0.within(self.dynamic_almost_0,
-                                              tolerance=0.011))
+        self.assertTrue(self.dynamic_0.within(self.dynamic_almost_0, tolerance=0.011))
 
         self.assertTrue(self.dynamic_1.within(self.dynamic_1, tolerance=0.0))
-        self.assertTrue(self.dynamic_1.within(self.dynamic_almost_1,
-                                              tolerance=0.011))
+        self.assertTrue(self.dynamic_1.within(self.dynamic_almost_1, tolerance=0.011))

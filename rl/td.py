@@ -1,7 +1,7 @@
-'''Monte Carlo methods for working with Markov Reward Process and
+"""Monte Carlo methods for working with Markov Reward Process and
 Markov Decision Processes.
 
-'''
+"""
 
 from typing import Callable, Iterable, Iterator, TypeVar, Tuple
 
@@ -10,15 +10,15 @@ import rl.markov_process as mp
 import rl.markov_decision_process as mdp
 import rl.iterate as iterate
 
-S = TypeVar('S')
+S = TypeVar("S")
 
 
 def td_prediction(
-        transitions: Iterable[mp.TransitionStep[S]],
-        approx_0: FunctionApprox[S],
-        γ: float,
+    transitions: Iterable[mp.TransitionStep[S]],
+    approx_0: FunctionApprox[S],
+    γ: float,
 ) -> Iterator[FunctionApprox[S]]:
-    '''Evaluate an MRP using TD(0) using the given sequence of
+    """Evaluate an MRP using TD(0) using the given sequence of
     transitions.
 
     Each value this function yields represents the approximated value
@@ -30,25 +30,27 @@ def td_prediction(
       approx_0 -- initial approximation of value function
       γ -- discount rate (0 < γ ≤ 1)
 
-    '''
+    """
+
     def step(v, transition):
-        return v.update([(transition.state,
-                          transition.reward + γ * v(transition.next_state))])
+        return v.update(
+            [(transition.state, transition.reward + γ * v(transition.next_state))]
+        )
 
     return iterate.accumulate(transitions, step, initial=approx_0)
 
 
-A = TypeVar('A')
+A = TypeVar("A")
 
 
 # TODO: More specific name (ie experience replay?)
 def td_control(
-        transitions: Iterable[mdp.TransitionStep[S, A]],
-        actions: Callable[[S], Iterable[A]],
-        approx_0: FunctionApprox[Tuple[S, A]],
-        γ: float
+    transitions: Iterable[mdp.TransitionStep[S, A]],
+    actions: Callable[[S], Iterable[A]],
+    approx_0: FunctionApprox[Tuple[S, A]],
+    γ: float,
 ) -> Iterator[FunctionApprox[Tuple[S, A]]]:
-    '''Return policies that try to maximize the reward based on the given
+    """Return policies that try to maximize the reward based on the given
     set of experiences.
 
     Arguments:
@@ -61,15 +63,19 @@ def td_control(
       an itertor of approximations of the q function based on the
       transitions given as input
 
-    '''
+    """
+
     def step(q, transition):
         next_reward = max(
-            q((transition.next_state, a))
-            for a in actions(transition.next_state)
+            q((transition.next_state, a)) for a in actions(transition.next_state)
         )
-        return q.update([
-            ((transition.state, transition.action),
-             transition.reward + γ * next_reward)
-        ])
+        return q.update(
+            [
+                (
+                    (transition.state, transition.action),
+                    transition.reward + γ * next_reward,
+                )
+            ]
+        )
 
     return iterate.accumulate(transitions, step, initial=approx_0)

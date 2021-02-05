@@ -14,7 +14,7 @@ class PriceAndShares:
 
 @dataclass(frozen=True)
 class OptimalOrderExecution:
-    '''
+    """
     shares refers to the total number of shares N to be sold over
     T time steps.
 
@@ -41,7 +41,8 @@ class OptimalOrderExecution:
     initial_price_distribution refers to the distribution of prices
     at time 0 (needed to generate the samples of states at each time step,
     needed in the approximate backward induction algorithm).
-    '''
+    """
+
     shares: int
     time_steps: int
     avg_exec_price_diff: Sequence[Callable[[PriceAndShares], float]]
@@ -58,42 +59,30 @@ class OptimalOrderExecution:
         """
 
         utility_f: Callable[[float], float] = self.utility_func
-        price_diff: Sequence[Callable[[PriceAndShares], float]] = \
-            self.avg_exec_price_diff
-        dynamics: Sequence[Callable[[PriceAndShares], Distribution[float]]] = \
-            self.price_dynamics
+        price_diff: Sequence[
+            Callable[[PriceAndShares], float]
+        ] = self.avg_exec_price_diff
+        dynamics: Sequence[
+            Callable[[PriceAndShares], Distribution[float]]
+        ] = self.price_dynamics
         steps: int = self.time_steps
 
         class OptimalExecutionMDP(MarkovDecisionProcess[PriceAndShares, int]):
-
             def step(
-                self,
-                p_r: PriceAndShares,
-                sell: int
+                self, p_r: PriceAndShares, sell: int
             ) -> SampledDistribution[Tuple[PriceAndShares, float]]:
-
-                def sr_sampler_func(
-                    p_r=p_r,
-                    sell=sell
-                ) -> Tuple[PriceAndShares, float]:
-                    p_s: PriceAndShares = PriceAndShares(
-                        price=p_r.price,
-                        shares=sell
-                    )
+                def sr_sampler_func(p_r=p_r, sell=sell) -> Tuple[PriceAndShares, float]:
+                    p_s: PriceAndShares = PriceAndShares(price=p_r.price, shares=sell)
                     next_price: float = dynamics[t](p_s).sample()
                     next_rem: int = p_r.shares - sell
                     next_state: PriceAndShares = PriceAndShares(
-                        price=next_price,
-                        shares=next_rem
+                        price=next_price, shares=next_rem
                     )
-                    reward: float = utility_f(
-                        sell * (p_r.price - price_diff[t](p_s))
-                    )
+                    reward: float = utility_f(sell * (p_r.price - price_diff[t](p_s)))
                     return (next_state, reward)
 
                 return SampledDistribution(
-                    sampler=sr_sampler_func,
-                    expectation_samples=100
+                    sampler=sr_sampler_func, expectation_samples=100
                 )
 
             def actions(self, p_s: PriceAndShares) -> Iterator[int]:
@@ -104,40 +93,34 @@ class OptimalOrderExecution:
 
         return OptimalExecutionMDP()
 
-    def get_states_distribution(self, t: int) -> \
-            SampledDistribution[PriceAndShares]:
-
+    def get_states_distribution(self, t: int) -> SampledDistribution[PriceAndShares]:
         def states_sampler_func() -> PriceAndShares:
             price: float = self.initial_price_distribution.sample()
             rem: int = self.shares
             for i in range(t):
                 sell: int = Choose(set(range(rem + 1))).sample()
-                price = self.price_dynamics[i](PriceAndShares(
-                    price=price,
-                    shares=rem
-                )).sample()
+                price = self.price_dynamics[i](
+                    PriceAndShares(price=price, shares=rem)
+                ).sample()
                 rem -= sell
-            return PriceAndShares(
-                price=price,
-                shares=rem
-            )
+            return PriceAndShares(price=price, shares=rem)
 
         return SampledDistribution(states_sampler_func)
 
     def backward_induction_vf_and_pi(
-        self
-    ) -> Iterator[Tuple[FunctionApprox[PriceAndShares],
-                        Policy[PriceAndShares, int]]]:
+        self,
+    ) -> Iterator[Tuple[FunctionApprox[PriceAndShares], Policy[PriceAndShares, int]]]:
 
-        mdp_f0_mu_triples: Sequence[Tuple[
-            MarkovDecisionProcess[PriceAndShares, int],
-            FunctionApprox[PriceAndShares],
-            SampledDistribution[PriceAndShares]
-        ]] = [(
-            self.get_mdp(i),
-            self.func_approx,
-            self.get_states_distribution(i)
-        ) for i in range(self.time_steps)]
+        mdp_f0_mu_triples: Sequence[
+            Tuple[
+                MarkovDecisionProcess[PriceAndShares, int],
+                FunctionApprox[PriceAndShares],
+                SampledDistribution[PriceAndShares],
+            ]
+        ] = [
+            (self.get_mdp(i), self.func_approx, self.get_states_distribution(i))
+            for i in range(self.time_steps)
+        ]
 
         num_state_samples: int = 10000
         error_tolerance: float = 1e-6
@@ -146,11 +129,11 @@ class OptimalOrderExecution:
             mdp_f0_mu_triples=mdp_f0_mu_triples,
             γ=self.discount_factor,
             num_state_samples=num_state_samples,
-            error_tolerance=error_tolerance
+            error_tolerance=error_tolerance,
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     from rl.distribution import Gaussian
 
@@ -162,19 +145,16 @@ if __name__ == '__main__':
     beta: float = 0.05
 
     price_diff = [lambda p_s: beta * p_s.shares for _ in range(num_time_steps)]
-    dynamics = [lambda p_s: Gaussian(
-        μ=p_s.price - alpha * p_s.shares,
-        σ=0.
-    ) for _ in range(num_time_steps)]
+    dynamics = [
+        lambda p_s: Gaussian(μ=p_s.price - alpha * p_s.shares, σ=0.0)
+        for _ in range(num_time_steps)
+    ]
     ffs = [
         lambda p_s: p_s.price * p_s.shares,
-        lambda p_s: float(p_s.shares * p_s.shares)
+        lambda p_s: float(p_s.shares * p_s.shares),
     ]
     fa: FunctionApprox = LinearFunctionApprox.create(feature_functions=ffs)
-    init_price_distrib: Gaussian = Gaussian(
-        μ=init_price_mean,
-        σ=init_price_stdev
-    )
+    init_price_distrib: Gaussian = Gaussian(μ=init_price_mean, σ=init_price_stdev)
 
     ooe: OptimalOrderExecution = OptimalOrderExecution(
         shares=num_shares,
@@ -184,16 +164,13 @@ if __name__ == '__main__':
         utility_func=lambda x: x,
         discount_factor=1,
         func_approx=fa,
-        initial_price_distribution=init_price_distrib
+        initial_price_distribution=init_price_distrib,
     )
-    it_vf: Iterator[Tuple[FunctionApprox[PriceAndShares],
-                          Policy[PriceAndShares, int]]] = \
-        ooe.backward_induction_vf_and_pi()
+    it_vf: Iterator[
+        Tuple[FunctionApprox[PriceAndShares], Policy[PriceAndShares, int]]
+    ] = ooe.backward_induction_vf_and_pi()
 
-    state: PriceAndShares = PriceAndShares(
-        price=init_price_mean,
-        shares=num_shares
-    )
+    state: PriceAndShares = PriceAndShares(price=init_price_mean, shares=num_shares)
     print("Backward Induction: VF And Policy")
     print("---------------------------------")
     print()
@@ -219,8 +196,9 @@ if __name__ == '__main__':
         opt_sale: float = num_shares / num_time_steps
         wt1: float = 1
         wt2: float = -(2 * beta + alpha * (left - 1)) / (2 * left)
-        val: float = wt1 * state.price * state.shares + \
-            wt2 * state.shares * state.shares
+        val: float = (
+            wt1 * state.price * state.shares + wt2 * state.shares * state.shares
+        )
 
         print(f"Optimal Sales = {opt_sale:.3f}, Opt Val = {val:.3f}")
         print(f"Weight1 = {wt1:.3f}")

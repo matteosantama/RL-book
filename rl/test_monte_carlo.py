@@ -10,15 +10,14 @@ import rl.monte_carlo as mc
 
 
 class FlipFlop(FiniteMarkovRewardProcess[bool]):
-    '''A version of FlipFlop implemented with the FiniteMarkovProcess
+    """A version of FlipFlop implemented with the FiniteMarkovProcess
     machinery.
 
-    '''
+    """
 
     def __init__(self, p: float):
         transition_reward_map = {
-            b: Categorical({(not b, 2.0): p, (b, 1.0): 1 - p})
-            for b in (True, False)
+            b: Categorical({(not b, 2.0): p, (b, 1.0): 1 - p}) for b in (True, False)
         }
         super().__init__(transition_reward_map)
 
@@ -34,7 +33,7 @@ class TestEvaluate(unittest.TestCase):
         v = iterate.converged(
             mc.mc_prediction(traces, γ=0.99, approx_0=start),
             # Loose bound of 0.025 to speed up test.
-            done=lambda a, b: a.within(b, 0.025)
+            done=lambda a, b: a.within(b, 0.025),
         )
 
         self.assertEqual(len(v.values_map), 2)
