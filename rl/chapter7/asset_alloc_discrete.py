@@ -46,7 +46,7 @@ class AssetAllocDiscrete:
                         wealth - alloc
                     ) * (1 + rate)
                     reward: float = utility_f(next_wealth) if t == steps - 1 else 0.0
-                    return (next_wealth, reward)
+                    return next_wealth, reward
 
                 return SampledDistribution(
                     sampler=sr_sampler_func, expectation_samples=1000
