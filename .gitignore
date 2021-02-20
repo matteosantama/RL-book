@@ -23,5 +23,8 @@ __pycache__
 # macOS files
 .DS_Store
 
+# Don't accidentally make midterm public
+midterm
+
 # Jupyter notebooks
 .ipynb_checkpoints
