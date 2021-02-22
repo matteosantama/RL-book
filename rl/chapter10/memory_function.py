@@ -22,7 +22,7 @@ def plot_memory_function(theta: float, event_times: List[float]) -> None:
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     theta = 0.8
     event_times = [2.0, 3.0, 4.0, 7.0, 9.0, 14.0, 15.0, 21.0]
     plot_memory_function(theta, event_times)

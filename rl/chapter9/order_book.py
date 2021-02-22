@@ -69,16 +69,19 @@ class OrderBook:
 
         return (DollarsAndShares(dollars=dollars, shares=shares - rem_shares), [])
 
-
-    def sell_limit_order(self, price: float, shares: int) -> \
-            Tuple[DollarsAndShares, OrderBook]:
-        index: Optional[int] = next((i for i, d_s
-                                     in enumerate(self.descending_bids)
-                                     if d_s.dollars < price), None)
-        eligible_bids: PriceSizePairs = self.descending_bids \
-            if index is None else self.descending_bids[:index]
-        ineligible_bids: PriceSizePairs = [] if index is None else \
-            self.descending_bids[index:]
+    def sell_limit_order(
+        self, price: float, shares: int
+    ) -> Tuple[DollarsAndShares, OrderBook]:
+        index: Optional[int] = next(
+            (i for i, d_s in enumerate(self.descending_bids) if d_s.dollars < price),
+            None,
+        )
+        eligible_bids: PriceSizePairs = (
+            self.descending_bids if index is None else self.descending_bids[:index]
+        )
+        ineligible_bids: PriceSizePairs = (
+            [] if index is None else self.descending_bids[index:]
+        )
 
         d_s, rem_bids = OrderBook.eat_book(eligible_bids, shares)
         new_bids: PriceSizePairs = list(rem_bids) + list(ineligible_bids)
@@ -99,29 +102,27 @@ class OrderBook:
                 new_asks[index1] = DollarsAndShares(
                     dollars=price, shares=new_asks[index1].shares + rem_shares
                 )
-            return d_s, OrderBook(
-                ascending_asks=new_asks,
-                descending_bids=new_bids
-            )
+            return d_s, OrderBook(ascending_asks=new_asks, descending_bids=new_bids)
         else:
-            return d_s, replace(
-                self,
-                descending_bids=new_bids
-            )
+            return d_s, replace(self, descending_bids=new_bids)
 
     def sell_market_order(self, shares: int) -> Tuple[DollarsAndShares, OrderBook]:
         d_s, rem_bids = OrderBook.eat_book(self.descending_bids, shares)
         return (d_s, replace(self, descending_bids=rem_bids))
 
-    def buy_limit_order(self, price: float, shares: int) -> \
-            Tuple[DollarsAndShares, OrderBook]:
-        index: Optional[int] = next((i for i, d_s
-                                     in enumerate(self.ascending_asks)
-                                     if d_s.dollars > price), None)
-        eligible_asks: PriceSizePairs = self.ascending_asks \
-            if index is None else self.ascending_asks[:index]
-        ineligible_asks: PriceSizePairs = [] if index is None else \
-            self.ascending_asks[index:]
+    def buy_limit_order(
+        self, price: float, shares: int
+    ) -> Tuple[DollarsAndShares, OrderBook]:
+        index: Optional[int] = next(
+            (i for i, d_s in enumerate(self.ascending_asks) if d_s.dollars > price),
+            None,
+        )
+        eligible_asks: PriceSizePairs = (
+            self.ascending_asks if index is None else self.ascending_asks[:index]
+        )
+        ineligible_asks: PriceSizePairs = (
+            [] if index is None else self.ascending_asks[index:]
+        )
 
         d_s, rem_asks = OrderBook.eat_book(eligible_asks, shares)
         new_asks: PriceSizePairs = list(rem_asks) + list(ineligible_asks)
@@ -143,16 +144,9 @@ class OrderBook:
                     dollars=price, shares=new_bids[index1].shares + rem_shares
                 )
 
-            return d_s, replace(
-                self,
-                ascending_asks=new_asks,
-                descending_bids=new_bids
-            )
+            return d_s, replace(self, ascending_asks=new_asks, descending_bids=new_bids)
         else:
-            return d_s, replace(
-                self,
-                ascending_asks=new_asks
-            )
+            return d_s, replace(self, ascending_asks=new_asks)
 
     def buy_market_order(self, shares: int) -> Tuple[DollarsAndShares, OrderBook]:
         d_s, rem_asks = OrderBook.eat_book(self.ascending_asks, shares)

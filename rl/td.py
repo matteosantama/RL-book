@@ -31,14 +31,13 @@ def td_prediction(
       γ -- discount rate (0 < γ ≤ 1)
 
     """
+
     def step(
-            v: FunctionApprox[S],
-            transition: mp.TransitionStep[S]
+        v: FunctionApprox[S], transition: mp.TransitionStep[S]
     ) -> FunctionApprox[S]:
-        return v.update([(
-            transition.state,
-            transition.reward + γ * v(transition.next_state)
-        )])
+        return v.update(
+            [(transition.state, transition.reward + γ * v(transition.next_state))]
+        )
 
     return iterate.accumulate(transitions, step, initial=approx_0)
 
@@ -66,9 +65,9 @@ def td_control(
       an itertor of approximations of the q function based on the
       transitions given as input
     """
+
     def step(
-            q: FunctionApprox[Tuple[S, A]],
-            transition: mdp.TransitionStep[S, A]
+        q: FunctionApprox[Tuple[S, A]], transition: mdp.TransitionStep[S, A]
     ) -> FunctionApprox[Tuple[S, A]]:
         next_reward = max(
             q((transition.next_state, a)) for a in actions(transition.next_state)
