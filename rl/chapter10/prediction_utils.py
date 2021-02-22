@@ -31,6 +31,7 @@ def fmrp_episodes_stream(
     return mrp_episodes_stream(fmrp, Choose(set(fmrp.non_terminal_states)))
 
 
+<<<<<<< HEAD
 def mc_prediction_equal_wts(
     mrp: MarkovRewardProcess[S],
     start_state_distribution: Distribution[S],
@@ -46,6 +47,8 @@ def mc_prediction_equal_wts(
     )
 
 
+=======
+>>>>>>> upstream/master
 def mc_finite_prediction_equal_wts(
     fmrp: FiniteMarkovRewardProcess[S],
     gamma: float,

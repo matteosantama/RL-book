@@ -159,7 +159,8 @@ Now we are ready to write the method `sell_limit_order` which takes Sell MO Pric
 ```python
 from dataclasses import replace
 
-    def sell_limit_order(self, price: float, shares: int) -> OrderBook:
+    def sell_limit_order(self, price: float, shares: int) -> \
+            Tuple[DollarsAndShares, OrderBook]:
         index: Optional[int] = next((i for i, d_s
                                      in enumerate(self.descending_bids)
                                      if d_s.dollars < price), None)
@@ -192,12 +193,12 @@ from dataclasses import replace
                     dollars=price,
                     shares=new_asks[index1].shares + rem_shares
                 )
-            return OrderBook(
+            return d_s, OrderBook(
                 ascending_asks=new_asks,
                 descending_bids=new_bids
             )
         else:
-            return replace(
+            return d_s, replace(
                 self,
                 descending_bids=new_bids
             )
@@ -239,7 +240,7 @@ The above code creates an `OrderBook` in the price range [91, 114] with a bid-as
 Let's submit a Sell LO that says we'd like to sell 40 shares as long as the transacted price is greater than or equal to 107. Our Sell LO should simply get added to the Sell LO side of the OB.
 
 ```python
-ob1: OrderBook = ob0.sell_limit_order(107, 40)
+d_s1, ob1 = ob0.sell_limit_order(107, 40)
 ```
 
 The new `OrderBook` `ob1` has 40 more shares at the price level of 107, as depicted in Figure \ref{fig:order_book_1}.
@@ -248,7 +249,7 @@ The new `OrderBook` `ob1` has 40 more shares at the price level of 107, as depic
 
 Now let's submit a Sell MO that says we'd like to sell 120 shares at the "best price". Our Sell MO should transact with 120 shares at "best prices" of 100 and 99 as well (since the OB does not have enough Buy LO shares at the price of 100). 
 ```python
-d_s, ob2 = ob1.sell_market_order(120)
+d_s2, ob2 = ob1.sell_market_order(120)
 ```
 
 The new `OrderBook` `ob2` has 120 less shares on the Buy LO side of the OB, as depicted in Figure \ref{fig:order_book_2}.   
@@ -258,7 +259,7 @@ The new `OrderBook` `ob2` has 120 less shares on the Buy LO side of the OB, as d
 Now let's submit a Buy LO that says we'd like to buy 80 shares as long as the transacted price is less than or equal to 100. Our Buy LO should get added to the Buy LO side of the OB.
 
 ```python
-ob3: OrderBook = ob2.buy_limit_order(100, 80)
+d_s3, ob3 = ob2.buy_limit_order(100, 80)
 ```
 
 The new `OrderBook` `ob3` has re-introduced a Buy LO at the price level of 100 (now with 80 shares), as depicted in Figure \ref{fig:order_book_3}.
@@ -268,7 +269,7 @@ The new `OrderBook` `ob3` has re-introduced a Buy LO at the price level of 100 (
 Now let's submit a Sell LO that says we'd like to sell 60 shares as long as the transacted price is greater than or equal to 104. Our Sell LO should get added to the Sell LO side of the OB.
 
 ```python
-ob4: OrderBook = ob3.sell_limit_order(104, 60)
+d_s4, ob4 = ob3.sell_limit_order(104, 60)
 ```
 
 The new `OrderBook` `ob4` has introduced a Sell LO at a price of 104 with 60 shares, as depicted in Figure \ref{fig:order_book_4}.
@@ -278,7 +279,7 @@ The new `OrderBook` `ob4` has introduced a Sell LO at a price of 104 with 60 sha
 Now let's submit a Buy MO that says we'd like to buy 150 shares at the "best price". Our Buy MO should transact with 150 shares at "best prices" on the Sell LO side of the OB.
 
 ```python
-d_s, ob5 = ob4.buy_market_order(150)
+d_s5, ob5 = ob4.buy_market_order(150)
 ```
 
 The new `OrderBook` `ob5` has 150 less shares on the Sell LO side of the OB, wiping out all the shares at the price level of 104 and almost wiping out all the shares at the price level of 105, as depicted in Figure \ref{fig:order_book_5}.
@@ -494,7 +495,7 @@ As ever, in order to solve the Control problem, we define the Optimal Value Func
 
 Denote the Value Function for policy $\pi$ at time $t$ (for all $t = 0, 1, \ldots T-1$) as:
 
-$$V^{\pi}_t((P_t, R_t)) = \mathbb{E}_{\pi}[\sum_{i=0}^{T-1} N_i \cdot (P_i - \beta \cdot N_i)|(t,P_t,R_t)]$$
+$$V^{\pi}_t((P_t, R_t)) = \mathbb{E}_{\pi}[\sum_{i=t}^{T-1} N_i \cdot (P_i - \beta \cdot N_i)|(P_t,R_t)]$$
 
 Denote the Optimal Value Function at time $t$ (for all $t= 0, 1, \ldots, T-1$) as:
 
@@ -504,7 +505,7 @@ The Optimal Value Function satisfies the finite-horizon Bellman Optimality Equat
 $$V^*_t((P_t,R_t)) = \max_{N_t} \{ N_t \cdot (P_t - \beta \cdot N_t)  + \mathbb{E}[V^*_{t+1}((P_{t+1}, R_{t+1}))] \}$$
 and
 
-$$V^*_{T-1}((P_{T-1},R_{T-1})) = N_{T-1} \cdot (P_{T-1} - \beta \cdot N_{T-1})) = R_{T-1} \cdot (P_{T-1} - \beta \cdot R_{T-1})$$
+$$V^*_{T-1}((P_{T-1},R_{T-1})) = N_{T-1} \cdot (P_{T-1} - \beta \cdot N_{T-1}) = R_{T-1} \cdot (P_{T-1} - \beta \cdot R_{T-1})$$
 
 From the above, we can infer:
 
@@ -711,7 +712,7 @@ We need to point out here that the general case of optimal order execution invol
 $$P_{t+1} = P_t - (\beta \cdot N_t + \theta \cdot X_t) + \epsilon_t$$
 $$X_{t+1} = \rho \cdot X_t + \eta_t$$
 $$Q_t = P_t - (\beta \cdot N_t + \theta \cdot X_t)$$
-where $\epsilon_t$ and $\eta_t$ are each independent and identically distributed for all $t = 0, 1, \ldots, T-1$,  $\epsilon_t$ and $\eta_t$ are also mutually independent, and each has mean zero. $X_t$ can be thought of as a market factor affecting $P_t$ linearly. Applying the finite-horizon Bellman Optimality Equation on the Optimal Value Function (and the same backward-recursive approach as before) yields:
+where $\epsilon_t$ and $\eta_t$ are each independent and identically distributed random variables with mean zero for all $t = 0, 1, \ldots, T-1$,  $\epsilon_t$ and $\eta_t$ are also independent of each other for all $t=0, 1, \ldots, T-1$. $X_t$ can be thought of as a market factor affecting $P_t$ linearly. Applying the finite-horizon Bellman Optimality Equation on the Optimal Value Function (and the same backward-recursive approach as before) yields:
 $$N^*_t = \frac {R_t} {T-t} + h(t, \beta, \theta, \rho) \cdot X_t$$
 $$V^*_t((P_t,R_t,X_t)) = R_t \cdot P_t - (\text{quadratic in } (R_t, X_t) + \text{ constant})$$
 Essentially, the serial-correlation predictability ($\rho \neq 0$) alters the uniform-split strategy.
@@ -727,7 +728,7 @@ The specific model is:
 $$P_{t+1} = P_t \cdot e^{Z_t}$$
 $$X_{t+1} = \rho \cdot X_t + \eta_t$$
 $$Q_t = P_t \cdot (1 - \beta \cdot N_t - \theta \cdot X_t)$$
-where $Z_t$ is a random variable with mean $\mu_Z$ and variance $\sigma^2_Z$. With the same derivation methodology as before, we get the solution:
+where $Z_t$ are independent and identically distributed random variables with mean $\mu_Z$ and variance $\sigma^2_Z$, $\eta_t$ are independent and identically distributed random variables with mean zero for all $t = 0, 1, \ldots, T-1$, $Z_t$ and $\eta_t$ are independent of each other for all $t = 0, 1, \ldots, T-1$. $X_t$ can be thought of as a market factor affecting $P_t$ multiplicatively. With the same derivation methodology as before, we get the solution:
 $$N_t^* = c^{(1)}_t + c^{(2)}_t R_t + c^{(3)}_t X_t $$
 $$V^*_t((P_t,R_t,X_t)) = e^{\mu_Z + \frac {\sigma_Z^2} 2} \cdot P_t \cdot (c^{(4)}_t + c^{(5)}_t R_t + c^{(6)}_t X_t + c^{(7)}_t R_t^2 + c^{(8)}_t X_t^2 + c^{(9)}_t R_t X_t)$$
 where $c^{(k)}_t, 1 \leq k \leq 9$, are independent of $P_t, R_t, X_t$
@@ -803,7 +804,7 @@ $$
 The goal is to find an *Optimal Policy* $\pi^* = (\pi^*_0, \pi^*_1, \ldots, \pi^*_{T-1})$, where
 $$\pi^*_t((S_t, W_t, I_t)) = (P_t^{(b)}, N_t^{(b)}, P_t^{(a)}, N_t^{(a)})$$
 that maximizes:
-$$\mathbb{E}[\sum_{t=1}^T R_t] = \mathbb{E}[R_T] = U(W_T + I_T \cdot S_T)$$
+$$\mathbb{E}[\sum_{t=1}^T R_t] = \mathbb{E}[R_T] = \mathbb{E}[U(W_T + I_T \cdot S_T)]$$
 
 #### Avellaneda-Stoikov Continuous-Time Formulation
 
@@ -839,12 +840,8 @@ The Utility function is assumed to be: $U(x) = -e^{-\gamma x}$ where $\gamma > 0
 
 We can express this continuous-time formulation as a Hamilton-Jacobi-Bellman (HJB) formulation (note: for reference, the general HJB formulation is covered in Appendix [-@sec:hjb-appendix]).
 
-We denote the Optimal Value function as $V^*(t, S_t, W_t, I_t)$.
+We denote the Optimal Value function as $V^*(t, S_t, W_t, I_t)$. Note that unlike Section [-@sec:finite-horizon-section] in Chapter [-@sec:dp-chapter] where we denoted the Optimal Value Function as a time-indexed sequence $V^*_t(\cdot)$, here we make $t$ an explicit functional argument of $V^*$ and each of $S_t, W_t, I_t$ also as separate functional arguments of $V^*$ (instead of the typical approach of making the state, as a tuple, a single functional argument). This is because in the continuous-time setting, we are interested in the time-differential of the Optimal Value Function and we also want to represent the dependency of the Optimal Value Function on each of $S_t, W_t, I_t$ as explicit separate dependencies. Appendix [-@sec:hjb-appendix] provides the derivation of the general HJB formulation (Equation \eqref{eq:hjb} in Appendix [-@sec:hjb-appendix]) - this general HJB Equation specializes here to the following:
 
-$$V^*(t, S_t, W_t, I_t) = \max_{\delta_t^{(b)}, \delta_t^{(a)}} \mathbb{E}[-e^{-\gamma \cdot (W_T + I_T \cdot S_T)}]$$
-$V^*(t, S_t, W_t, I_t)$ satisfies a recursive formulation for $0 \leq t < t_1 < T$ as follows:
-$$V^*(t, S_t, W_t, I_t) = \max_{\delta_t^{(b)}, \delta_t^{(a)}} \mathbb{E}[V^*(t_1, S_{t_1}, W_{t_1}, I_{t_1})]$$
-Rewriting in stochastic differential form, we have the HJB Equation:
 $$\max_{\delta_t^{(b)}, \delta_t^{(a)}} \mathbb{E}[dV^*(t, S_t, W_t, I_t)] = 0 \mbox{ for } t < T$$
 $$V^*(T, S_T, W_T, I_T) = -e^{-\gamma \cdot (W_T + I_T \cdot S_T)}$$
 
