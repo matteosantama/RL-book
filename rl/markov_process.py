@@ -190,7 +190,7 @@ class MarkovRewardProcess(MarkovProcess[S]):
 
     def simulate_reward(
         self, start_state_distribution: Distribution[S]
-    ) -> Iterable[TransitionStep[S]]:
+        ) -> Iterable[TransitionStep[S]]:
         """Simulate the MRP, yielding an Iterable of
         (state, next state, reward) for each sampled transition.
         """
