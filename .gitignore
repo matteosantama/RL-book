@@ -25,6 +25,7 @@ __pycache__
 
 # Don't accidentally make midterm public
 midterm
+final
 
 # Jupyter notebooks
 .ipynb_checkpoints

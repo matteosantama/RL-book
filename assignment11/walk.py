@@ -67,17 +67,3 @@ class RandomWalk2D(FiniteMarkovRewardProcess[S]):
             tmap[s] = Categorical(dist)
                 
         return tmap
-        
-#         d: Dict[int, Optional[Categorical[Tuple[int, float]]]] = {
-#             i: Categorical(
-#                 {
-#                     (i + 1, 0.0 if i < self.barrier - 1 else 1.0): self.p,
-#                     (i - 1, 0.0): 1 - self.p,
-#                 }
-#             )
-#             for i in range(1, self.barrier)
-#         }
-#         d[0] = None
-#         d[self.barrier] = None
-#         return d
-        return {}
